@@ -1,0 +1,5 @@
+# Kept separate from backend/requirements.txt on purpose — same reasoning
+# as gis/requirements.txt and ml/requirements.txt: the running API never
+# imports these, only the standalone bridge/simulator scripts in this folder.
+paho-mqtt==2.1.0
+requests==2.32.3

@@ -1,0 +1,13 @@
+# Only needed for gis/delineate_catchment.py and gis/load_catchment_polygon.py.
+# Kept separate from backend/requirements.txt — these are heavy geospatial
+# libraries the running API never imports; installing them isn't required
+# to run the app itself, only to (re)generate catchment polygons.
+#
+# numpy is pinned below 2.x because pysheds 0.5 (the latest release on PyPI
+# as of this writing) still calls np.in1d, which numpy 2.0 removed —
+# confirmed by actually hitting that AttributeError in this sandbox.
+numpy<2
+rasterio==1.4.4
+pysheds==0.5
+geopandas==1.1.4
+shapely==2.0.6

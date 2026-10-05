@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+frontend/dist/
+
+# Env
+.env
+!*.env.example
+
+# OS / editor
+.DS_Store
+.vscode/
+*.log
+
+# Data (large geospatial/raster files should not be committed raw — see gis/README.md)
+data/**/*.tif
+data/**/*.tiff
+# The global WGMS glacier mass-balance archive is ~50MB and regenerable —
+# scripts/prepare_glacier_mass_balance_data.py re-downloads it; only the
+# small, filtered, committed output is data/derived/real_himalaya_glacier_mass_balance.csv
+data/raw/glacier_mass_balance/*.zip
+# Raw Overpass API JSON responses are regenerable (a live re-fetch, not a
+# one-time download like the shapefiles above) — scripts/prepare_road_network_data.py
+# re-fetches them; only the small, filtered, committed output is
+# data/derived/real_himalaya_road_network.json
+data/raw/osm_overpass_cache/*.json
+
+# ML artifacts are regenerable (python ml/train.py) — see ml/README.md
+ml/artifacts/*.csv
+ml/artifacts/*.json
+ml/artifacts/*.joblib
+
+# Device-authentication follow-up: the only place a device's plaintext API
+# key is ever written (the database stores only its hash) — see
+# scripts/_device_key_utils.py. Never commit this.
+iot/device_keys.json
+
+# Delta zips / staging folders from the build sessions, not part of the project
+Claude outputs/
+*-delta.zip
+*-delta/
+whatif-simulator-delta.zip
+*.tsbuildinfo

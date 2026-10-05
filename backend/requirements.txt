@@ -1,0 +1,29 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic==2.13.5
+pydantic-settings==2.15.0
+python-dotenv==1.0.1
+
+# Database (Phase 2)
+sqlalchemy==2.0.52
+geoalchemy2==0.15.2
+psycopg[binary]>=3.2.2,<3.3
+alembic==1.13.3
+shapely==2.0.6
+
+# Testing
+pytest==8.3.3
+httpx==0.27.2
+
+# Wired up from Phase 3 onward (listed now so requirements.txt reflects the
+# target stack from problem-statement item 25; not all are importable yet):
+# geopandas==1.0.1
+# rasterio==1.3.11
+# scikit-learn==1.5.2
+# xgboost==2.1.1
+# shap==0.46.0
+# paho-mqtt==2.1.0
+
+# Evacuation routing (Phase 12) — real shortest-path computation over the
+# real per-catchment village topology; see app/services/evacuation.py
+networkx==3.6.1

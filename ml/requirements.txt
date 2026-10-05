@@ -1,0 +1,16 @@
+# Only needed for ml/generate_synthetic_training_data.py and ml/train.py.
+# Kept separate from backend/requirements.txt — the running API never
+# imports these; GET /risk/* is served entirely by the Phase 4 baseline
+# (backend/app/services/risk_engine.py), not by anything in this directory.
+# See ml/README.md and docs/ML_Methodology.md for why.
+numpy<2
+pandas==3.0.5
+scikit-learn==1.9.0
+xgboost==3.2.0
+joblib==1.6.0
+
+# Real ML training-data assembly (Phase 12 follow-up):
+# ml/assemble_real_events.py needs openpyxl to read the raw GLOF .xlsx;
+# ml/backfill_real_weather.py needs requests for live NASA POWER API calls.
+openpyxl==3.1.5
+requests==2.32.3
