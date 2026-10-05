@@ -1,0 +1,21 @@
+.git
+.gitignore
+**/node_modules
+**/.venv
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.DS_Store
+Claude outputs
+*-delta
+*.zip
+frontend
+ml
+notebooks
+tests
+docs
+gis
+iot
+data/raw
+backend/.env
+iot/device_keys.json

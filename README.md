@@ -232,6 +232,7 @@ curl http://localhost:8000/api/v1/replay/1                     # real — full o
 - [`docs/Region_Onboarding.md`](docs/Region_Onboarding.md) — how a real valley moves from `planned` to `active` in the region registry
 - [`docs/Future_Work.md`](docs/Future_Work.md) — the phase-by-phase roadmap
 - [`docs/Product_Positioning.md`](docs/Product_Positioning.md) — positioning, differentiation, stakeholder Q&A
+- [`docs/Deployment.md`](docs/Deployment.md) — free-tier public hosting (Neon + Render)
 
 ## Design principles this codebase follows
 

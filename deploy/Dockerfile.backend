@@ -1,0 +1,25 @@
+# Production backend image for hosted deployment (see docs/Deployment.md).
+#
+# Build context is the REPO ROOT (not backend/), because several services
+# read real datasets from <repo>/data/derived at runtime: the services
+# resolve DATA_PATH with Path(__file__).parents[3], i.e. /srv/data/derived
+# when the code lives in /srv/backend/app/services/. The older
+# backend/Dockerfile (used by docker-compose for local dev) only copies
+# backend/app and would be missing those files.
+FROM python:3.11-slim
+
+WORKDIR /srv
+
+COPY backend/requirements.txt backend/requirements.txt
+RUN pip install --no-cache-dir -r backend/requirements.txt
+
+COPY backend/app backend/app
+COPY backend/alembic.ini backend/alembic.ini
+COPY backend/migrations backend/migrations
+COPY scripts scripts
+COPY data/derived data/derived
+
+WORKDIR /srv/backend
+
+# Render (and most hosts) inject $PORT; fall back to 8000 for local runs.
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

@@ -1,0 +1,52 @@
+# Render Blueprint: one backend web service + one static frontend.
+# See docs/Deployment.md for the full walkthrough (database on Neon,
+# migrations/seeding from your own machine, and what to change if the
+# service names below are already taken on Render).
+services:
+  - type: web
+    name: girivarsha-api
+    runtime: docker
+    plan: free
+    region: singapore   # keep this the same region as your Neon database
+    dockerfilePath: ./deploy/Dockerfile.backend
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      # Paste your Neon connection string in the Render dashboard, in the
+      # form postgresql+psycopg://USER:PASSWORD@HOST/DB?sslmode=require
+      - key: GIRIVARSHA_DATABASE_URL
+        sync: false
+      - key: GIRIVARSHA_ENVIRONMENT
+        value: production
+      # Must exactly match the frontend's public URL (no trailing slash).
+      - key: GIRIVARSHA_CORS_ORIGINS
+        value: '["https://girivarsha.onrender.com"]'
+      # Live Open-Meteo / NASA POWER data instead of simulated inputs.
+      - key: GIRIVARSHA_ACTIVE_RAINFALL_PROVIDER
+        value: real
+      - key: GIRIVARSHA_ACTIVE_SOIL_PROVIDER
+        value: real
+      - key: GIRIVARSHA_ACTIVE_ANTECEDENT_PROVIDER
+        value: real
+      # Records what WOULD be sent, never claims real delivery.
+      - key: GIRIVARSHA_ACTIVE_SMS_PROVIDER
+        value: log_only
+
+  - type: web
+    name: girivarsha
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      # Baked into the build; must match the backend service's public URL.
+      - key: VITE_API_BASE_URL
+        value: https://girivarsha-api.onrender.com
+      - key: NODE_VERSION
+        value: "20"
+    routes:
+      # Single-page app: /authority and any other client route must serve index.html.
+      - type: rewrite
+        source: /*
+        destination: /index.html

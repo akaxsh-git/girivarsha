@@ -1,0 +1,72 @@
+# Deployment (free tier: Neon + Render)
+
+This puts Girivarsha on the public internet at no cost: a managed Postgres/PostGIS database on **Neon**, the FastAPI backend and the React frontend on **Render**. Config lives in `render.yaml` and `deploy/Dockerfile.backend`.
+
+**What runs publicly:** the dashboards, risk engine (live Open-Meteo / NASA POWER inputs), evacuation routing, replay, what-if simulator. Sensors show the real Open-Meteo regional estimate (clearly labelled) because no MQTT broker, bridge or simulator is hosted.
+
+**What does not:** the sensor simulator pipeline (it stays a local development tool).
+
+## 1. Create the database on Neon
+
+1. Sign up at neon.tech and create a project. Pick the **Singapore** region (same as the backend in `render.yaml`).
+2. In the Neon **SQL Editor**, run: `CREATE EXTENSION IF NOT EXISTS postgis;`
+3. Copy the connection string from the dashboard (Connection details, direct, not pooled). Rewrite its start for SQLAlchemy and make sure it ends with `?sslmode=require`:
+   `postgresql+psycopg://USER:PASSWORD@HOST/DBNAME?sslmode=require`
+   (Neon shows `postgresql://...`; add `+psycopg` after `postgresql`.)
+
+## 2. Create the tables and load the real data (from your own machine)
+
+Render's free plan has no shell and no pre-deploy command, so you run migrations and seeds once from your laptop against Neon.
+
+**First, protect your local sensor keys.** `seed_iot_nodes.py` merges new keys into `iot/device_keys.json`, which would overwrite the keys your local database expects. Back it up outside the repo and restore it afterwards:
+
+```
+cd ~/Downloads/girivarsha-phase11-regions
+cp iot/device_keys.json ~/device_keys.local.backup.json
+```
+
+Then, in `backend/`:
+
+```
+cd backend && source .venv/bin/activate
+export GIRIVARSHA_DATABASE_URL='postgresql+psycopg://USER:PASSWORD@HOST/DBNAME?sslmode=require'
+alembic upgrade head
+python ../scripts/seed_pilot_region.py
+python ../scripts/seed_chamoli_valley.py
+python ../scripts/seed_regions.py
+python ../scripts/seed_event_timelines.py
+python ../scripts/seed_iot_nodes.py
+```
+
+Restore your local keys and clear the variable:
+
+```
+cp ~/device_keys.local.backup.json ../iot/device_keys.json
+unset GIRIVARSHA_DATABASE_URL
+```
+
+The keys generated for Neon are not needed: the hosted site has no publisher, and keyed sensors reject anonymous `POST /sensor-reading` requests, which is what you want on a public API.
+
+## 3. Deploy on Render
+
+1. Commit and push `render.yaml`, `deploy/`, `.dockerignore` and this file to GitHub.
+2. Sign in at render.com with GitHub. **New, Blueprint**, pick the `girivarsha` repo. Render reads `render.yaml` and proposes two services.
+3. When prompted, paste your Neon string as `GIRIVARSHA_DATABASE_URL`. Apply.
+4. Wait for both to build (backend ~5 min, frontend ~2 min).
+
+**If the service names are taken:** Render adds a suffix to the URL. Then update, in `render.yaml` or the Render dashboard: the frontend's `VITE_API_BASE_URL` to the real backend URL, the backend's `GIRIVARSHA_CORS_ORIGINS` to the real frontend URL (a JSON list, exactly matching, no trailing slash), then redeploy both.
+
+## 4. Check it
+
+- `https://girivarsha-api.onrender.com/api/v1/health` returns JSON.
+- `https://girivarsha.onrender.com` loads the dashboard; `/authority` loads the authority view.
+- A CORS error in the browser console means the two URLs in step 3 don't match.
+
+## Things to know on the free tier
+
+- **Cold starts.** The backend sleeps after 15 minutes idle and takes roughly 30-60 seconds to wake. The first visit after idle is slow; the site then behaves normally. A free uptime pinger (e.g. UptimeRobot hitting `/api/v1/health` every 10 minutes) keeps it awake.
+- **Memory.** Render's free instance has 512MB. The road/trail network graph (71K nodes) is held in memory when evacuation routes are requested. If the service restarts with out-of-memory messages in its logs, move the backend to a paid instance (about $7/month) or another host.
+- **Neon** suspends idle databases and wakes on the next query (about a second). Free-tier storage limits are far above this project's size.
+- **Phone numbers.** `POST /notifications/subscribe` stores whatever a visitor enters. With the default `log_only` provider nothing is sent, but a public deployment would be collecting phone numbers, so consider removing or gating that form before promoting the site widely.
+- **Writes on GET.** `GET /risk/*` opens, escalates and resolves alerts in the database (the real alert engine). That is by design, but it means anonymous page loads change data.
+- **No MQTT/TLS hardening needed here**, since the hosted deployment has no broker. The gaps listed in `docs/Limitations.md` for a hosted sensor pipeline still apply if you add one later.
