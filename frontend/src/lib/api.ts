@@ -1,5 +1,7 @@
 // Thin fetch wrapper around the backend. Deliberately tiny in Phase 1 —
 // grows into a typed client as real endpoints (villages, risk, alerts) land.
+import { fetchWindDirect } from './windDirect'
+
 export const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
 
 export interface HealthResponse {
@@ -608,7 +610,7 @@ export interface WindField {
   note: string
 }
 
-export async function getWindField(
+async function getWindFieldFromBackend(
   bounds: { south: number; west: number; north: number; east: number },
   signal?: AbortSignal,
 ): Promise<WindField> {
@@ -621,4 +623,21 @@ export async function getWindField(
   const res = await fetch(`${API_BASE}/api/v1/wind?${qs}`, { signal })
   if (!res.ok) throw new Error(`Wind field unavailable (${res.status})`)
   return res.json()
+}
+
+/**
+ * Real wind grid: fetched from Open-Meteo by the viewer's browser first
+ * (own IP/quota — shared hosting IPs get rate-limited), falling back to the
+ * backend's GET /wind (which can serve an older real grid flagged stale).
+ */
+export async function getWindField(
+  bounds: { south: number; west: number; north: number; east: number },
+  signal?: AbortSignal,
+): Promise<WindField> {
+  try {
+    return await fetchWindDirect(bounds, signal)
+  } catch (err) {
+    if (signal?.aborted) throw err
+    return getWindFieldFromBackend(bounds, signal)
+  }
 }

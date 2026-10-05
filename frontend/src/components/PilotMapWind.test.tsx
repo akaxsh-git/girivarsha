@@ -28,8 +28,13 @@ const field: WindField = {
 }
 
 const fetchMock = vi.fn()
+const openMeteo = Array.from({ length: 25 }, () => ({
+  current: { time: '2026-10-05T15:00', wind_speed_10m: 3, wind_direction_10m: 270, wind_gusts_10m: 5 },
+}))
+
 beforeEach(() => {
   fetchMock.mockReset()
+  try { sessionStorage.clear() } catch { /* ignore */ }
   vi.stubGlobal('fetch', fetchMock)
 })
 afterEach(cleanup)
@@ -42,11 +47,28 @@ describe('PilotMap wind overlay', () => {
   })
 
   it('fetches real wind and shows the layer plus honest legend when toggled on', async () => {
-    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => field })
+    fetchMock.mockImplementation(async (url: string) =>
+      url.includes('open-meteo')
+        ? { ok: true, status: 200, json: async () => openMeteo }
+        : { ok: false, status: 503, json: async () => ({}) },
+    )
     render(<PilotMap villages={villages} />)
     await userEvent.click(screen.getByRole('button', { name: /show wind/i }))
     await waitFor(() => expect(screen.getByTestId('wind-layer')).toBeInTheDocument())
     expect(screen.getByText(/not used by the risk model/i)).toBeInTheDocument()
+    expect(fetchMock.mock.calls[0][0]).toContain('api.open-meteo.com')
+  })
+
+  it('falls back to the backend when the browser call to Open-Meteo fails', async () => {
+    fetchMock.mockImplementation(async (url: string) =>
+      url.includes('open-meteo')
+        ? { ok: false, status: 429, json: async () => ({}) }
+        : { ok: true, status: 200, json: async () => field },
+    )
+    render(<PilotMap villages={villages} />)
+    await userEvent.click(screen.getByRole('button', { name: /show wind/i }))
+    await waitFor(() => expect(screen.getByTestId('wind-layer')).toBeInTheDocument())
+    expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('/api/v1/wind'))).toBe(true)
   })
 
   it('says wind is unavailable instead of drawing anything when the API fails', async () => {
