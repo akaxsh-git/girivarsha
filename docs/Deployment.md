@@ -70,3 +70,7 @@ The keys generated for Neon are not needed: the hosted site has no publisher, an
 - **Phone numbers.** `POST /notifications/subscribe` stores whatever a visitor enters. With the default `log_only` provider nothing is sent, but a public deployment would be collecting phone numbers, so consider removing or gating that form before promoting the site widely.
 - **Writes on GET.** `GET /risk/*` opens, escalates and resolves alerts in the database (the real alert engine). That is by design, but it means anonymous page loads change data.
 - **No MQTT/TLS hardening needed here**, since the hosted deployment has no broker. The gaps listed in `docs/Limitations.md` for a hosted sensor pipeline still apply if you add one later.
+
+## Gotcha: database URL driver prefix
+
+The backend uses SQLAlchemy with the `psycopg` v3 driver, so `GIRIVARSHA_DATABASE_URL` must start with `postgresql+psycopg://`. Neon shows `postgresql://...`; pasting that as-is makes SQLAlchemy look for `psycopg2` and every DB endpoint returns 500 (`No module named 'psycopg2'`) while `/health` still looks fine. Add `+psycopg` after `postgresql`, and never paste the real password into chat or commit it.

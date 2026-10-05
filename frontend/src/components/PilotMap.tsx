@@ -1,7 +1,9 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { MapContainer, TileLayer, CircleMarker, Popup, Polyline } from 'react-leaflet'
 import { latLngBounds, type LatLngBoundsExpression } from 'leaflet'
-import type { Village } from '../lib/api'
+import { getWindField, type Village, type WindField } from '../lib/api'
+import { meanSpeed, windBoundsFor } from '../lib/wind'
+import { WindLayer } from './WindLayer'
 import 'leaflet/dist/leaflet.css'
 
 interface PilotMapProps {
@@ -59,6 +61,25 @@ export function PilotMap({ villages }: PilotMapProps) {
       )
   }, [villages])
 
+  // Wind overlay (opt-in). Real Open-Meteo wind, fetched only when toggled
+  // on; a failure just hides the layer and says so — nothing is invented.
+  const [windOn, setWindOn] = useState(false)
+  const [wind, setWind] = useState<WindField | null>(null)
+  const [windError, setWindError] = useState<string | null>(null)
+  useEffect(() => {
+    if (!windOn || villages.length === 0) return
+    const ctrl = new AbortController()
+    setWindError(null)
+    getWindField(windBoundsFor(villages.map((v) => [v.lat, v.lon] as [number, number])), ctrl.signal)
+      .then(setWind)
+      .catch((e: unknown) => {
+        if (ctrl.signal.aborted) return
+        setWind(null)
+        setWindError(e instanceof Error ? e.message : 'Wind data unavailable')
+      })
+    return () => ctrl.abort()
+  }, [windOn, villages])
+
   if (villages.length === 0) {
     return (
       <div className="map-empty" role="status">
@@ -69,6 +90,18 @@ export function PilotMap({ villages }: PilotMapProps) {
 
   return (
     <div className="map-wrap">
+      <div className="wind-toolbar">
+        <button
+          type="button"
+          className="wind-toggle"
+          aria-pressed={windOn}
+          onClick={() => setWindOn((v) => !v)}
+        >
+          {windOn ? 'Hide wind' : 'Show wind'}
+        </button>
+        {windOn && !wind && !windError && <span role="status">Loading wind…</span>}
+        {windError && <span role="status">Wind data unavailable right now.</span>}
+      </div>
       <MapContainer
         bounds={bounds}
         boundsOptions={{ padding: [32, 32] }}
@@ -79,6 +112,7 @@ export function PilotMap({ villages }: PilotMapProps) {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        {windOn && wind && <WindLayer field={wind} />}
         {elevationOrderPathsByCatchment.map((path, i) => (
           <Polyline
             key={i}
@@ -124,6 +158,13 @@ export function PilotMap({ villages }: PilotMapProps) {
         <span>
           <i className="line-legend" /> Elevation order within each catchment only — not the real river course
         </span>
+        {windOn && wind && (
+          <span>
+            Wind: real Open-Meteo current 10 m wind, coarse regional grid (mean{' '}
+            {meanSpeed(wind).toFixed(1)} m/s). Valley-scale terrain winds are not resolved — context only,
+            not used by the risk model.
+          </span>
+        )}
       </div>
     </div>
   )

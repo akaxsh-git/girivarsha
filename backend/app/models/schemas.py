@@ -412,3 +412,34 @@ class SimulationOut(BaseModel):
     model_version: str
     drivers: dict
     note: str
+
+
+class WindPointOut(BaseModel):
+    """One grid point of the wind field. `direction_deg` is meteorological
+    (where the wind blows FROM); `u`/`v` are eastward/northward m/s."""
+
+    lat: float
+    lon: float
+    speed_ms: float
+    direction_deg: float
+    gust_ms: float | None = None
+    u: float
+    v: float
+
+
+class WindFieldOut(BaseModel):
+    """Real, coarse regional wind field for the map overlay. Always
+    `source="real"` (Open-Meteo); the endpoint returns 503 rather than
+    inventing values. Context only — not an input to the risk model."""
+
+    south: float
+    west: float
+    north: float
+    east: float
+    nx: int
+    ny: int
+    points: list[WindPointOut]  # row-major, south->north, west->east
+    valid_time: str | None = None
+    source: str
+    provider: str
+    note: str

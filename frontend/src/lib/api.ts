@@ -580,3 +580,43 @@ export async function runSimulation(payload: SimulationRequest, signal?: AbortSi
   }
   return res.json()
 }
+
+export interface WindPoint {
+  lat: number
+  lon: number
+  speed_ms: number
+  direction_deg: number
+  gust_ms: number | null
+  u: number
+  v: number
+}
+
+/** Real, coarse regional wind field (Open-Meteo). Context only. */
+export interface WindField {
+  south: number
+  west: number
+  north: number
+  east: number
+  nx: number
+  ny: number
+  points: WindPoint[]
+  valid_time: string | null
+  source: string
+  provider: string
+  note: string
+}
+
+export async function getWindField(
+  bounds: { south: number; west: number; north: number; east: number },
+  signal?: AbortSignal,
+): Promise<WindField> {
+  const qs = new URLSearchParams({
+    south: bounds.south.toFixed(3),
+    west: bounds.west.toFixed(3),
+    north: bounds.north.toFixed(3),
+    east: bounds.east.toFixed(3),
+  })
+  const res = await fetch(`${API_BASE}/api/v1/wind?${qs}`, { signal })
+  if (!res.ok) throw new Error(`Wind field unavailable (${res.status})`)
+  return res.json()
+}

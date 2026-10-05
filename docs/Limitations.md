@@ -216,3 +216,7 @@ Honest, current, as of **Phase 5**. This file is updated every phase — see `do
 ## What would be needed before real-world deployment
 
 Field calibration against real sensor networks, operational validation of the risk model against a longer historical record, integration agreements with the actual data-owning agencies (IMD, ISRO/NRSC, CWC), a security/authentication implementation beyond the MVP interface, and sign-off from the disaster-management authorities who would actually act on its output.
+
+## Wind overlay (map)
+
+The optional "Show wind" layer on the Authority map draws animated particles from **real** Open-Meteo current 10 m wind, fetched on a coarse grid (default 7x7) over the villages' extent and cached for an hour per area. It is regional context only: the underlying model resolves roughly 2-11 km, so terrain-channelled winds inside narrow Himalayan valleys are **not** shown, and it must not be used to infer conditions at a specific village. It is not an input to the risk model. If Open-Meteo is unreachable the API returns 503 and the UI says wind is unavailable; nothing is simulated. Particle speed is a visual scale (colour encodes m/s bands), and `prefers-reduced-motion` gets a static streak frame instead of animation.

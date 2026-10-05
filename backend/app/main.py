@@ -13,6 +13,7 @@ from app.api.routes import (
     sensors,
     system,
     villages,
+    wind,
 )
 from app.core.config import get_settings
 
@@ -47,6 +48,7 @@ app.include_router(evacuation.router, prefix=settings.api_v1_prefix)
 app.include_router(replay.router, prefix=settings.api_v1_prefix)
 app.include_router(demo.router, prefix=settings.api_v1_prefix)
 app.include_router(notifications.router, prefix=settings.api_v1_prefix)
+app.include_router(wind.router, prefix=settings.api_v1_prefix)
 
 
 @app.get("/")
