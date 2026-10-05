@@ -440,6 +440,8 @@ class WindFieldOut(BaseModel):
     ny: int
     points: list[WindPointOut]  # row-major, south->north, west->east
     valid_time: str | None = None
+    fetched_at: str | None = None
+    stale: bool = False  # True = served from an older real fetch because upstream failed
     source: str
     provider: str
     note: str

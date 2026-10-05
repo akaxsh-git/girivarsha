@@ -161,7 +161,7 @@ export function PilotMap({ villages }: PilotMapProps) {
         {windOn && wind && (
           <span>
             Wind: real Open-Meteo current 10 m wind, coarse regional grid (mean{' '}
-            {meanSpeed(wind).toFixed(1)} m/s). Valley-scale terrain winds are not resolved — context only,
+            {meanSpeed(wind).toFixed(1)} m/s){wind.stale ? '; showing an earlier real reading because the weather service is busy' : ''}. Valley-scale terrain winds are not resolved — context only,
             not used by the risk model.
           </span>
         )}

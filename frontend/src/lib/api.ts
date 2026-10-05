@@ -601,6 +601,8 @@ export interface WindField {
   ny: number
   points: WindPoint[]
   valid_time: string | null
+  fetched_at?: string | null
+  stale?: boolean
   source: string
   provider: string
   note: string
