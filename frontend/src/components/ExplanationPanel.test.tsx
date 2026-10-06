@@ -147,4 +147,29 @@ describe('ExplanationPanel', () => {
     await waitFor(() => expect(screen.getByText(/driven primarily by/i)).toBeInTheDocument())
     expect(screen.queryByText(/live sensor/i)).not.toBeInTheDocument()
   })
+
+  it('groups villages by catchment, upstream first, and switching catchment explains that valley instead', async () => {
+    const user = userEvent.setup()
+    const reni: Village = {
+      ...villages[0],
+      id: 7,
+      name: 'Reni',
+      elevation_m: 1973,
+      catchment_id: 2,
+      catchment_name: 'Rishiganga-Dhauliganga Valley',
+    }
+    vi.mocked(api.getExplanation).mockImplementation(async (id) =>
+      id === 7 ? makeExplanation({ village_id: 7, village_name: 'Reni', summary: "Reni's score is moderate." }) : makeExplanation(),
+    )
+
+    render(<ExplanationPanel villages={[...villages, reni]} />)
+    const villageSelect = screen.getByLabelText(/explain the score for/i) as HTMLSelectElement
+    // Only the selected catchment's villages are offered, most upstream first.
+    expect([...villageSelect.options].map((o) => o.value)).toEqual(['1', '2'])
+    expect(villageSelect.options[0].textContent).toMatch(/most upstream/i)
+
+    await user.selectOptions(screen.getByLabelText(/^catchment$/i), '2')
+    await waitFor(() => expect(screen.getByText(/reni's score is moderate/i)).toBeInTheDocument())
+    expect([...(screen.getByLabelText(/explain the score for/i) as HTMLSelectElement).options].map((o) => o.value)).toEqual(['7'])
+  })
 })

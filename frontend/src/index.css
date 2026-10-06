@@ -696,3 +696,17 @@ main.citizen-main { max-width: 720px; }
 .sensor-row .sensor-id { order: 3; flex-basis: 100%; margin-top: 4px; }
 .sensor-row .sensor-value { order: 4; margin-top: 2px; }
 .stat-card .n { white-space: normal; }
+.explain-pickers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.explain-picker { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.explain-picker label { margin: 0; }
+.explain-picker select { width: 100%; }
+@media (max-width: 520px) { .explain-pickers { grid-template-columns: 1fr; } }
+.explain-chain { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.explain-chain li { display: inline-flex; align-items: center; gap: 4px; }
+.explain-chain li + li::before { content: '→'; color: #A9B5B0; font-size: 0.8rem; }
+.explain-chain button {
+  font-size: 0.76rem; padding: 4px 10px; border-radius: var(--radius-pill); border: 1px solid var(--line);
+  background: var(--surface); color: var(--muted); cursor: pointer; transition: background var(--ease), color var(--ease), border-color var(--ease);
+}
+.explain-chain button:hover { border-color: #C3CDC8; color: var(--ink); }
+.explain-chain button.active { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { getExplanation, type Explanation, type Village } from '../lib/api'
 
 interface ExplanationPanelProps {
@@ -15,17 +15,44 @@ interface ExplanationPanelProps {
  * paraphrasing (so the honesty framing can't silently drift from the
  * backend's).
  */
+interface CatchmentGroup {
+  key: string
+  name: string
+  villages: Village[] // upstream -> downstream (by elevation, the app's ordering proxy)
+}
+
+function groupByCatchment(villages: Village[]): CatchmentGroup[] {
+  const groups = new Map<string, CatchmentGroup>()
+  for (const v of villages) {
+    const key = v.catchment_id != null ? String(v.catchment_id) : 'none'
+    const name = v.catchment_name ?? 'No catchment assigned'
+    const g = groups.get(key) ?? { key, name, villages: [] }
+    g.villages.push(v)
+    groups.set(key, g)
+  }
+  for (const g of groups.values()) g.villages.sort((a, b) => (b.elevation_m ?? 0) - (a.elevation_m ?? 0))
+  // Seed order (catchment id), so the original pilot valley comes first.
+  return [...groups.values()].sort((a, b) => (a.key === 'none' ? 1 : b.key === 'none' ? -1 : Number(a.key) - Number(b.key)))
+}
+
 export function ExplanationPanel({ villages }: ExplanationPanelProps) {
+  const groups = useMemo(() => groupByCatchment(villages ?? []), [villages])
+  const [catchmentKey, setCatchmentKey] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [explanation, setExplanation] = useState<Explanation | null>(null)
   const [error, setError] = useState(false)
   const [loading, setLoading] = useState(false)
 
+  // Keep the catchment/village pair valid when the region (and so the
+  // village list) changes: default to the first catchment's most upstream village.
+  const activeGroup = groups.find((g) => g.key === catchmentKey) ?? groups[0] ?? null
   useEffect(() => {
-    if (selectedId === null && villages && villages.length > 0) {
-      setSelectedId(villages[0].id)
+    if (!activeGroup) return
+    if (catchmentKey !== activeGroup.key) setCatchmentKey(activeGroup.key)
+    if (selectedId === null || !activeGroup.villages.some((v) => v.id === selectedId)) {
+      setSelectedId(activeGroup.villages[0].id)
     }
-  }, [villages, selectedId])
+  }, [activeGroup, catchmentKey, selectedId])
 
   useEffect(() => {
     if (selectedId === null) return
@@ -51,18 +78,58 @@ export function ExplanationPanel({ villages }: ExplanationPanelProps) {
 
   return (
     <div className="explanation-panel">
-      <label htmlFor="explain-village-select">Explain the score for</label>
-      <select
-        id="explain-village-select"
-        value={selectedId ?? ''}
-        onChange={(e) => setSelectedId(Number(e.target.value))}
-      >
-        {villages.map((v) => (
-          <option key={v.id} value={v.id}>
-            {v.name}
-          </option>
-        ))}
-      </select>
+      <div className="explain-pickers">
+        <div className="explain-picker">
+          <label htmlFor="explain-catchment-select">Catchment</label>
+          <select
+            id="explain-catchment-select"
+            value={activeGroup?.key ?? ''}
+            onChange={(e) => {
+              const g = groups.find((x) => x.key === e.target.value)
+              setCatchmentKey(e.target.value)
+              if (g) setSelectedId(g.villages[0].id)
+            }}
+          >
+            {groups.map((g) => (
+              <option key={g.key} value={g.key}>
+                {g.name} ({g.villages.length})
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="explain-picker">
+          <label htmlFor="explain-village-select">Explain the score for</label>
+          <select
+            id="explain-village-select"
+            value={selectedId ?? ''}
+            onChange={(e) => setSelectedId(Number(e.target.value))}
+          >
+            {(activeGroup?.villages ?? []).map((v, i, arr) => (
+              <option key={v.id} value={v.id}>
+                {v.name}
+                {arr.length > 1 && i === 0 ? ' — most upstream' : ''}
+                {arr.length > 1 && i === arr.length - 1 ? ' — most downstream' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      {activeGroup && activeGroup.villages.length > 1 && (
+        <ol className="explain-chain" aria-label="Villages in this catchment, upstream to downstream">
+          {activeGroup.villages.map((v) => (
+            <li key={v.id}>
+              <button
+                type="button"
+                className={v.id === selectedId ? 'active' : ''}
+                aria-pressed={v.id === selectedId}
+                onClick={() => setSelectedId(v.id)}
+              >
+                {v.name}
+              </button>
+            </li>
+          ))}
+        </ol>
+      )}
 
       {error ? (
         <p className="catchment-empty">Explanation unreachable — backend/DB may be down.</p>
