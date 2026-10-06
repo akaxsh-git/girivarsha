@@ -102,10 +102,24 @@ SOURCE_CITATION = (
 class RainfallThresholdResult:
     current_intensity_mm_hr: float
     hours_to_threshold: float | None
-    status: str  # "below_floor" | "threshold_exceeded" | "approaching_within_24h" | "not_indicated_within_24h"
-    applicability: str  # "direct_fit" | "regional_proxy"
+    status: str  # "below_floor" | "threshold_exceeded" | "approaching_within_24h" | "not_indicated_within_24h" | "not_applicable"
+    applicability: str  # "direct_fit" | "regional_proxy" | "not_applicable"
     region_name: str | None
     note: str
+
+
+# Regions in the Garhwal Himalaya (Uttarakhand), where the Chamoli-Joshimath
+# curve is either a direct fit or a defensible regional proxy. Regions
+# elsewhere (Sikkim, Kashmir, Himachal) are a different climatic/geological
+# setting: the curve is NOT applied there at all rather than passed off as a
+# proxy it was never validated for.
+GARHWAL_REGION_KEYWORDS = ("chamoli", "mandakini")
+
+
+def is_out_of_region(region_name: str | None) -> bool:
+    """True only for a KNOWN region outside the Garhwal Himalaya. An unknown
+    region (None) keeps the historical regional-proxy behaviour."""
+    return region_name is not None and not any(k in region_name.lower() for k in GARHWAL_REGION_KEYWORDS)
 
 
 def _region_applicability(region_name: str | None) -> tuple[str, str]:
@@ -137,6 +151,19 @@ def assess_rainfall_threshold(intensity_mm_hr: float, region_name: str | None) -
     "degrade honestly, never crash" discipline as every other advisory
     indicator in this app."""
     intensity = max(0.0, intensity_mm_hr) if intensity_mm_hr == intensity_mm_hr else 0.0  # NaN guard
+    if is_out_of_region(region_name):
+        return RainfallThresholdResult(
+            current_intensity_mm_hr=round(intensity, 3),
+            hours_to_threshold=None,
+            status="not_applicable",
+            applicability="not_applicable",
+            region_name=region_name,
+            note=(
+                f"Not assessed: the only intensity-duration threshold wired in is calibrated for the Garhwal "
+                f"Himalaya (Chamoli-Joshimath), and {region_name} is outside that zone. No region-specific "
+                f"threshold has been sourced for it yet. {SOURCE_CITATION}"
+            ),
+        )
     applicability, applicability_clause = _region_applicability(region_name)
 
     if intensity < CRITICAL_INTENSITY_FLOOR_MM_HR:

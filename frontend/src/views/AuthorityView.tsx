@@ -208,8 +208,7 @@ export function AuthorityView() {
 
   // No device has ever reported => no hardware is deployed yet. Say that,
   // rather than a bare "0/12 online" that reads like an outage.
-  const noneDeployed =
-    !!scopedSensors && scopedSensors.length > 0 && scopedSensors.every((s) => s.seconds_since_last_seen === null)
+  const noneDeployed = !!scopedSensors && scopedSensors.every((s) => s.seconds_since_last_seen === null)
 
   const sensorsOnlineLabel = sensorsError
     ? '—'
@@ -310,7 +309,9 @@ export function AuthorityView() {
             {sensorsError
               ? 'unreachable'
               : noneDeployed
-                ? `none deployed yet (${scopedSensors!.length} sites planned)`
+                ? scopedSensors!.length > 0
+                  ? `none deployed yet (${scopedSensors!.length} sites planned)`
+                  : 'no sites planned in this region yet'
                 : 'reporting in the last few minutes'}
           </div>
         </div>

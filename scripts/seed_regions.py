@@ -70,9 +70,9 @@ REGIONS = [
             "glacial lake outburst flood (GLOF), triggered by a landslide/moraine collapse into the "
             "lake, which killed 90+ people and destroyed the Teesta III dam."
         ),
-        status="planned",
-        catchment_name=None,
-        provenance=f"{WIKI.format('2023_Sikkim_flash_floods')} (fetched 2026-09-04). No village-level data sourced yet — see docs/Region_Onboarding.md.",
+        status="active",
+        catchment_name="Lachen Chu-Teesta Valley (Lachen -> Rangpo)",
+        provenance=f"See docs/Data_Sources.md and {WIKI.format('2023_Sikkim_flash_floods')} (fetched 2026-10-06).",
     ),
     dict(
         name="Jhelum Basin / Kashmir Valley",
@@ -82,9 +82,9 @@ REGIONS = [
             "Jammu and Kashmir floods, in which torrential monsoon rainfall caused catastrophic "
             "flooding that killed 277 people in J&K and submerged large parts of Srinagar."
         ),
-        status="planned",
-        catchment_name=None,
-        provenance=f"{WIKI.format('2014_India%E2%80%93Pakistan_floods')} (fetched 2026-09-04). No village-level data sourced yet — see docs/Region_Onboarding.md.",
+        status="active",
+        catchment_name="Upper Jhelum Valley (Verinag -> Srinagar)",
+        provenance=f"See docs/Data_Sources.md and {WIKI.format('2014_India%E2%80%93Pakistan_floods')} (fetched 2026-10-06).",
     ),
     dict(
         name="Beas River Basin (Kullu-Manali)",
@@ -94,16 +94,16 @@ REGIONS = [
             "flooding beginning 8-9 July 2023 (part of the wider 2023 North India floods), which "
             "destroyed roads, bridges, and property along the Kullu-Manali-Leh highway."
         ),
-        status="planned",
-        catchment_name=None,
-        provenance=f"{WIKI.format('2023_North_India_floods')} (fetched 2026-09-04). No village-level data sourced yet — see docs/Region_Onboarding.md.",
+        status="active",
+        catchment_name="Upper Beas Valley (Manali -> Mandi)",
+        provenance=f"See docs/Data_Sources.md and {WIKI.format('2023_North_India_floods')} (fetched 2026-10-06).",
     ),
 ]
 
 
 def main() -> None:
     with session_scope() as db:
-        created, linked, skipped = 0, 0, 0
+        created, updated, linked, skipped = 0, 0, 0, 0
         for r in REGIONS:
             existing = db.scalar(select(Region).where(Region.name == r["name"]))
             if existing is None:
@@ -119,7 +119,17 @@ def main() -> None:
                 db.flush()
                 created += 1
             else:
-                skipped += 1
+                # Keep existing rows in step with this file (e.g. a region
+                # promoted from 'planned' to 'active' after sourcing).
+                if (existing.status, existing.description, existing.provenance) != (
+                    r["status"], r["description"], r["provenance"]
+                ):
+                    existing.status = r["status"]
+                    existing.description = r["description"]
+                    existing.provenance = r["provenance"]
+                    updated += 1
+                else:
+                    skipped += 1
 
             if r["catchment_name"] is not None:
                 catchment = db.scalar(select(MicroCatchment).where(MicroCatchment.name == r["catchment_name"]))
@@ -127,7 +137,7 @@ def main() -> None:
                     catchment.region_id = existing.id
                     linked += 1
 
-        print(f"Regions: {created} created, {skipped} already existed, {linked} catchment(s) linked.")
+        print(f"Regions: {created} created, {updated} updated, {skipped} unchanged, {linked} catchment(s) linked.")
 
 
 if __name__ == "__main__":

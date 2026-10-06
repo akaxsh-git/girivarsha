@@ -22,6 +22,7 @@ const RAINFALL_THRESHOLD_LABEL: Record<string, string> = {
   threshold_exceeded: 'threshold exceeded',
   approaching_within_24h: 'approaching within 24h',
   not_indicated_within_24h: 'not indicated within 24h',
+  not_applicable: 'not calibrated for this region',
 }
 
 function rainfallThresholdSummary(status: string | null | undefined, hours: number | null | undefined): string {

@@ -50,6 +50,20 @@ One real historical event is seeded: the 7 February 2021 flash flood, tied to Re
 
 Sources: [2021 Uttarakhand flood](https://en.wikipedia.org/wiki/2021_Uttarakhand_flood), [Tapovan Vishnugad Hydropower Plant](https://en.wikipedia.org/wiki/Tapovan_Vishnugad_Hydropower_Plant), [Vishnuprayag](https://en.wikipedia.org/wiki/Vishnuprayag), [Joshimath](https://en.wikipedia.org/wiki/Joshimath), [Dhauliganga River](https://en.wikipedia.org/wiki/Dhauliganga_River), [Rishiganga](https://en.wikipedia.org/wiki/Rishiganga) (all fetched 2026-09-04); ESA, ["Satellites reveal cause of Chamoli disaster"](https://www.esa.int/Applications/Observing_the_Earth/Satellites_reveal_cause_of_Chamoli_disaster); GEER Association Chamoli reconnaissance report (https://geerassociation.org/components/com_geer_reports/geerfiles/Chamoli_Report.pdf).
 
+## Three more active valleys — Teesta (Sikkim), Upper Jhelum (Kashmir), Upper Beas (Kullu-Manali)
+
+Seeded by `scripts/seed_new_regions.py` (then `scripts/seed_regions.py` flips the regions to `active`). All coordinates and elevations are from each place's English Wikipedia article, fetched 2026-10-06. Places without a sourced elevation (Dikchu, Bhuntar, Sopore) were left out.
+
+| Valley | Villages, upstream → downstream (elevation m) | Event |
+|---|---|---|
+| Lachen Chu-Teesta, Sikkim | Lachen 2,600 · Chungthang 1,790 · Mangan 956 · Singtam 426 · Rangpo 333 | 4 Oct 2023 South Lhonak GLOF (Teesta III dam destroyed, 92+ dead) |
+| Upper Jhelum, J&K | Verinag 1,851 · Anantnag 1,601 · Bijbehara 1,591 (approximate) · Srinagar 1,585 | Sept 2014 riverine flood (Jhelum 4.4 ft above danger mark at Srinagar, ~277 dead) — tagged `other`, not flash flood |
+| Upper Beas, H.P. | Manali 2,050 · Naggar 1,800 · Kullu 1,279 · Mandi 760 | July 2023 monsoon floods (roads swept away in Manali) |
+
+Known limitations: Lachen's article contradicts itself (infobox 2,600 m vs text ~2,900 m; infobox used). Mangan and Naggar are hillside towns, so their elevations are the town's, not the river's. Bijbehara's coordinate is only given to 0.1° and is tagged `approximate`. On the flat Kashmir Valley floor, recorded town elevations don't fall steadily downstream, so Pampore (1,573 m, upstream of Srinagar) and Baramulla (1,593 m, downstream) were left out — including them would make the elevation-order upstream proxy put Baramulla upstream of Srinagar. This is a real weakness of that proxy on valley floors.
+
+What these valleys don't have yet: per-village SCS-CN soil/land-cover inputs (runoff shows as unavailable), glacier mass-balance coverage (the committed dataset covers Uttarakhand only), OpenStreetMap road network (evacuation legs use the straight-line estimate), sensors and replay timelines. The rainfall intensity-duration threshold is calibrated for the Garhwal Himalaya, so it is reported as "not calibrated for this region" here rather than applied as a proxy. Rainfall, soil moisture (Open-Meteo hourly snapshot), recent rainfall history (NASA POWER) and glacial-lake proximity (Himalaya-wide inventory) all work.
+
 ## Region registry — scaling beyond one valley (Phase 11)
 
 `GET /regions` lists 5 real, named, documented flash-flood/landslide-prone Himalayan valleys, not placeholders: Mandakini Valley and the Chamoli Disaster Valley (`status: "active"` — real village-level data seeded, as above), plus 3 honestly `status: "planned"` valleys that the schema/API already support but that have **not** been sourced to village level (`village_count: 0`, never a fabricated number):
