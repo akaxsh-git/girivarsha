@@ -5,12 +5,9 @@ import { AuthorityView } from './views/AuthorityView'
 import { IconHome, IconLogomark, IconShield } from './components/Icons'
 
 /**
- * Phase 6-7: the single shared homepage from Phases 1-5 is now two real
- * routes sharing one header/shell — CitizenView (plain-language, public)
- * and AuthorityView (full technical detail, for district officials/DM
- * cell staff). Both call the same real backend endpoints; the split is
- * presentation-only, not a different data path or a friendlier set of
- * numbers for one audience.
+ * Two routes sharing one shell: CitizenView (plain-language, public) and
+ * AuthorityView (operational detail for district officials). Both call the
+ * same backend endpoints; the split is presentation-only.
  */
 export default function App() {
   return (
@@ -18,17 +15,16 @@ export default function App() {
       <div className="disclaimer">
         Prototype decision-support system — not an official government warning mechanism.
       </div>
-      <header className="hero">
-        <div className="hero-inner">
-          <div className="eyebrow">Girivarsha · Flash-flood &amp; landslide prediction for hilly regions</div>
-          <h1 style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <IconLogomark size={30} />
-            Girivarsha
-          </h1>
-          <div className="subtitle">Hyper-Local Flash Flood &amp; Landslide Early Warning</div>
-          <div className="tagline">Detect → Predict → Explain → Act</div>
-          <BackendStatus />
-          <nav className="view-tabs">
+      <header className="topbar">
+        <div className="topbar-inner">
+          <NavLink to="/" className="brand" aria-label="Girivarsha home">
+            <IconLogomark size={26} />
+            <span className="brand-text">
+              <span className="brand-name">Girivarsha</span>
+              <span className="brand-tag">Flash-flood &amp; landslide early warning</span>
+            </span>
+          </NavLink>
+          <nav className="view-tabs" aria-label="Views">
             <NavLink to="/" end className={({ isActive }) => (isActive ? 'view-tab active' : 'view-tab')}>
               <IconHome size={15} />
               Citizen view
@@ -38,6 +34,7 @@ export default function App() {
               Authority dashboard
             </NavLink>
           </nav>
+          <BackendStatus />
         </div>
       </header>
 
@@ -45,6 +42,11 @@ export default function App() {
         <Route path="/" element={<CitizenView />} />
         <Route path="/authority" element={<AuthorityView />} />
       </Routes>
+
+      <footer className="site-footer">
+        Girivarsha · Weather data from Open-Meteo and NASA POWER · Map data © OpenStreetMap contributors ·
+        Decision support only — always follow official guidance from your district administration.
+      </footer>
     </BrowserRouter>
   )
 }

@@ -98,6 +98,8 @@ const GLOF_TIER_LABEL: Record<Language, Record<string, string>> = {
 
 const STRINGS: Record<Language, Record<string, string>> = {
   en: {
+    pageTitle: 'Is my village at risk right now?',
+    pageSub: 'Choose your village to see current flash-flood and landslide conditions in plain language.',
     yourVillage: 'Your village',
     loadingVillages: 'Loading villages…',
     villageListUnreachable: 'Village list unreachable — backend/DB may be down.',
@@ -139,6 +141,8 @@ const STRINGS: Record<Language, Record<string, string>> = {
       ' Officials wanting the full technical breakdown, including the exact distance and village used, can use the Authority dashboard.',
   },
   hi: {
+    pageTitle: 'क्या मेरे गाँव में अभी खतरा है?',
+    pageSub: 'अपना गाँव चुनें और अचानक बाढ़ व भूस्खलन की मौजूदा स्थिति आसान भाषा में देखें।',
     yourVillage: 'आपका गाँव',
     loadingVillages: 'गाँव लोड हो रहे हैं…',
     villageListUnreachable: 'गाँवों की सूची उपलब्ध नहीं है — बैकएंड/डेटाबेस बंद हो सकता है।',
@@ -251,6 +255,11 @@ export function CitizenView() {
 
   return (
     <main className="citizen-main">
+      <div className="citizen-hero">
+        <div>
+          <h1 className="page-title">{t.pageTitle}</h1>
+          <p className="page-sub">{t.pageSub}</p>
+        </div>
       <div className="lang-toggle" role="group" aria-label="Language / भाषा">
         <button
           type="button"
@@ -267,8 +276,9 @@ export function CitizenView() {
           हिन्दी
         </button>
       </div>
+      </div>
 
-      <div className="section citizen-picker">
+      <div className="citizen-picker">
         <label htmlFor="village-select">{t.yourVillage}</label>
         {villagesState === 'error' ? (
           <p className="catchment-empty">{t.villageListUnreachable}</p>

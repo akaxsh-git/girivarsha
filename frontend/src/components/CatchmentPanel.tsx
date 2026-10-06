@@ -38,7 +38,7 @@ export function CatchmentPanel({ catchments, error }: CatchmentPanelProps) {
           <div className={`catchment-geom ${c.has_polygon_geometry ? 'ok' : 'pending'}`}>
             {c.has_polygon_geometry
               ? 'Real delineated boundary available'
-              : 'No real boundary polygon yet — topology only (see GIS_Methodology.md)'}
+              : 'No real boundary polygon yet — upstream/downstream order only'}
           </div>
         </li>
       ))}

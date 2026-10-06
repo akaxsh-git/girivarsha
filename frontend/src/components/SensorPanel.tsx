@@ -43,6 +43,12 @@ function formatAge(seconds: number | null): string {
  * device's own measurement — it's real weather data, just not from this
  * exact sensor.
  */
+/** Compact display unit; the full unit stays in the API response. */
+function shortUnit(unit: string | null): string {
+  if (!unit) return ''
+  return unit.startsWith('pct') ? '% vol.' : unit
+}
+
 export function SensorPanel({ sensors, error }: SensorPanelProps) {
   if (error) {
     return <p className="catchment-empty">Sensor registry unreachable — backend/DB may be down.</p>
@@ -53,19 +59,16 @@ export function SensorPanel({ sensors, error }: SensorPanelProps) {
   if (sensors.length === 0) {
     return (
       <p className="catchment-empty">
-        No sensor nodes provisioned yet — run <code>python scripts/seed_iot_nodes.py</code>.
+        No sensor nodes provisioned yet.
       </p>
     )
   }
 
   return (
     <div>
-      <div className="risk-disclaimer">
-        Readings flow through a real MQTT broker and a real ingestion API (both actually run and
-        verified) — but no physical ESP32 hardware exists yet, so a simulator publishes the values
-        on the MQTT side today. Real firmware exists (<code>iot/firmware/</code>) but is untested on
-        actual boards. See docs/IoT_Architecture.md.
-      </div>
+      <p className="sensor-note">
+        No field hardware is deployed yet; when the demo pipeline runs, a simulator publishes the values.
+      </p>
       <ul className="sensor-list">
         {sensors.map((s) => (
           <li key={s.id} className="sensor-row">
@@ -78,13 +81,13 @@ export function SensorPanel({ sensors, error }: SensorPanelProps) {
             </span>
             <span className="sensor-value">
               {s.last_value !== null ? (
-                `${s.last_value} ${s.last_unit}`
+                `${s.last_value} ${shortUnit(s.last_unit)}`
               ) : s.fallback_value !== null ? (
                 <span
                   className="sensor-value-fallback"
                   title="No live reading from this device — real Open-Meteo regional weather estimate for its village, not this sensor's own measurement."
                 >
-                  ~{s.fallback_value} {s.fallback_unit} (regional est.)
+                  ~{s.fallback_value} {shortUnit(s.fallback_unit)} (regional est.)
                 </span>
               ) : (
                 '—'
@@ -95,8 +98,8 @@ export function SensorPanel({ sensors, error }: SensorPanelProps) {
               className={`sensor-auth ${s.authenticated ? 'sensor-auth-yes' : 'sensor-auth-no'}`}
               title={
                 s.authenticated
-                  ? 'This device has a real per-device API key on file — POST /sensor-reading enforces it.'
-                  : 'No API key on file yet — this device is accepted un-authenticated (pre-rotation state, not a bug). Run scripts/rotate_sensor_api_keys.py to give it one.'
+                  ? 'This device has its own API key; readings without it are rejected.'
+                  : 'No API key on file yet — this device is accepted un-authenticated until a key is issued.'
               }
             >
               {s.authenticated ? 'keyed' : 'no key'}

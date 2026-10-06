@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react'
 import { getAllEvacuationRoutes, getEvacuationRoute, type EvacuationRoute, type Village } from '../lib/api'
 
+/** "~45 min" under an hour, otherwise "~19 h 11 min". */
+function formatDuration(minutes: number): string {
+  const m = Math.round(minutes)
+  if (m < 60) return `~${m} min`
+  const h = Math.floor(m / 60)
+  const rest = m % 60
+  return rest === 0 ? `~${h} h` : `~${h} h ${rest} min`
+}
+
 interface EvacuationPanelProps {
   villages: Village[] | null
   regionId: number | null
@@ -113,7 +122,7 @@ export function EvacuationPanel({ villages, regionId }: EvacuationPanelProps) {
                     <td>{r.origin_village_name}</td>
                     <td>{r.destination_village_name ?? '—'}</td>
                     <td>{r.hops.length > 0 ? `${r.total_distance_km} km` : '—'}</td>
-                    <td>{r.estimated_minutes !== null ? `~${Math.round(r.estimated_minutes)} min` : '—'}</td>
+                    <td>{r.estimated_minutes !== null ? formatDuration(r.estimated_minutes) : '—'}</td>
                     <td>
                       {r.hops.length === 0 ? (
                         '—'
@@ -143,9 +152,8 @@ export function EvacuationPanel({ villages, regionId }: EvacuationPanelProps) {
           </table>
         )}
         <p className="evacuation-note">
-          Click a row to see its full hop-by-hop breakdown below. "Route data" shows how much of each
-          route uses a real OpenStreetMap road/trail path vs. the straight-line elevation-order proxy
-          (used only where real coverage doesn't reach) — see backend/app/services/evacuation.py.
+          Select a row to see its step-by-step route below. "Route data" shows whether each leg follows a
+          real OpenStreetMap road or trail, or a straight-line estimate where mapping doesn't reach.
         </p>
       </div>
 
@@ -177,7 +185,7 @@ export function EvacuationPanel({ villages, regionId }: EvacuationPanelProps) {
             <span>{route.total_distance_km} km</span>
             <span>
               {route.estimated_minutes !== null
-                ? `~${Math.round(route.estimated_minutes)} min on foot (prototype)`
+                ? `${formatDuration(route.estimated_minutes)} on foot (prototype)`
                 : ''}
             </span>
           </div>
@@ -203,7 +211,10 @@ export function EvacuationPanel({ villages, regionId }: EvacuationPanelProps) {
               </li>
             ))}
           </ol>
-          <p className="evacuation-note">{route.note}</p>
+          <details className="fine-print">
+            <summary>Route assumptions</summary>
+            <p>{route.note}</p>
+          </details>
         </div>
       )}
     </div>

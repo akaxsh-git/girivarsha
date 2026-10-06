@@ -37,17 +37,18 @@ export function BackendStatus() {
 
   const dotClass = status === 'online' ? 'dot dot-online' : status === 'offline' ? 'dot dot-offline' : 'dot dot-checking'
 
+  const label = status === 'online' ? 'Live' : status === 'offline' ? 'Service unreachable' : 'Connecting…'
+  const title =
+    status === 'online' && health
+      ? `Backend online — ${health.phase}${checkedAt ? ` · checked ${checkedAt.toLocaleTimeString()}` : ''}`
+      : status === 'offline'
+        ? 'The API is not responding. If you run this locally: cd backend && uvicorn app.main:app --reload'
+        : 'Checking the API…'
+
   return (
-    <div className="backend-status">
+    <div className="backend-status" title={title} role="status">
       <span className={dotClass} aria-hidden="true" />
-      <span>
-        {status === 'online' && health
-          ? `Backend online — ${health.phase}`
-          : status === 'offline'
-            ? 'Backend unreachable — start it with: cd backend && uvicorn app.main:app --reload'
-            : 'Checking backend…'}
-      </span>
-      {checkedAt && <span className="status-time">checked {checkedAt.toLocaleTimeString()}</span>}
+      <span>{label}</span>
     </div>
   )
 }

@@ -88,8 +88,11 @@ export function ExplanationPanel({ villages }: ExplanationPanelProps) {
               </li>
             ))}
           </ul>
-          <p className="explanation-model">Model explained: {explanation.model_explained}</p>
-          <p className="explanation-caveat">{explanation.caveat}</p>
+          <details className="fine-print">
+            <summary>About this explanation</summary>
+            <p>Model explained: {explanation.model_explained}</p>
+            <p>{explanation.caveat}</p>
+          </details>
         </div>
       )}
     </div>

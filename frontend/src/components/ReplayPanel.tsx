@@ -123,7 +123,15 @@ export function ReplayPanel() {
 
       <div className="replay-entry">
         <div className="replay-entry-when">
-          {current.occurred_at ? new Date(current.occurred_at).toUTCString() : 'time not recorded'}
+          {current.occurred_at
+            ? new Date(current.occurred_at).toLocaleString('en-IN', {
+                timeZone: 'Asia/Kolkata',
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+                ...(current.time_precision === 'date_only' ? {} : { hour: '2-digit', minute: '2-digit' }),
+              }) + (current.time_precision === 'date_only' ? '' : ' IST')
+            : 'time not recorded'}
           <span className={`replay-precision precision-${current.time_precision}`}>
             {PRECISION_LABEL[current.time_precision] ?? current.time_precision}
           </span>
@@ -134,9 +142,8 @@ export function ReplayPanel() {
       </div>
 
       <p className="replay-caveat">
-        Every step above is a real, cited moment from the historical record — not a simulation. The public
-        record for this disaster is genuinely incomplete; gaps and approximate times are labelled as such,
-        never smoothed over into a fabricated minute-by-minute account.
+        Every step is a real, cited moment from the historical record. Gaps and approximate times are
+        labelled as such rather than filled in.
       </p>
     </div>
   )

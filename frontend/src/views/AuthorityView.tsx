@@ -8,9 +8,11 @@ import { EvacuationPanel } from '../components/EvacuationPanel'
 import { PriorityPanel } from '../components/PriorityPanel'
 import { ReplayPanel } from '../components/ReplayPanel'
 import { WhatIfPanel } from '../components/WhatIfPanel'
+import { Card } from '../components/Card'
+import { AlertsList, LiveBadge } from '../components/RiskPanel'
 import {
   IconActivity,
-  IconCheckSquare,
+  IconShield,
   IconClock,
   IconGauge,
   IconHistory,
@@ -40,30 +42,11 @@ import {
   type Region,
 } from '../lib/api'
 
-const PHASES: { name: string; status: 'done' | 'next' | 'todo' }[] = [
-  { name: 'Phase 1 — Project skeleton + repository structure', status: 'done' },
-  { name: 'Phase 2 — Database + geospatial pilot data', status: 'done' },
-  { name: 'Phase 3 — Map + villages + micro-catchments', status: 'done' },
-  { name: 'Phase 4 — Risk engine baseline', status: 'done' },
-  { name: 'Phase 5 — ML model (XGBoost / Random Forest)', status: 'done' },
-  { name: 'Phase 6-7 — API integration + dashboards', status: 'done' },
-  { name: 'Phase 8 — IoT integration (real MQTT pipeline, simulated hardware)', status: 'done' },
-  { name: 'Phase 9-10 — Explainability + lead-time estimation + real weather providers (opt-in)', status: 'done' },
-  { name: 'Phase 11 — Region registry + second real pilot valley (Chamoli)', status: 'done' },
-  { name: 'Phase 12 — Evacuation routing + historical replay', status: 'done' },
-  { name: 'Phase 13 — Failure/fallback testing', status: 'done' },
-  { name: 'Phase 14 — Demo polish', status: 'done' },
-  { name: 'Sensor network wired into the risk engine (user-requested follow-up)', status: 'done' },
-  { name: 'What-If Simulator (user-requested follow-up)', status: 'done' },
-]
-
 /**
- * The "authority" dashboard — the full-detail operational view for district
- * officials / disaster-management cell staff: raw scores, confidence
- * percentages, per-village driver data, catchment topology, build status.
- * This is the same content the single shared homepage showed through
- * Phase 5; Phase 6-7 just gave it its own route and added CitizenView as a
- * separate, simplified entry point for the public (see App.tsx).
+ * The authority dashboard — the operational view for district officials /
+ * disaster-management staff: scores, confidence, drivers, sensors,
+ * evacuation and scenarios. Each card keeps its methodology and limits in a
+ * collapsed "How this works" section (components/Card.tsx).
  */
 export function AuthorityView() {
   const [regions, setRegions] = useState<Region[] | null>(null)
@@ -246,21 +229,32 @@ export function AuthorityView() {
       ? 'all regions'
       : (regions?.find((r) => r.id === selectedRegionId)?.name ?? 'the selected region')
 
+  const openAlertCount = alertsError ? null : scopedAlerts ? scopedAlerts.length : undefined
+  const topRisk = riskMap && riskMap.length > 0 ? [...riskMap].sort((a, b) => b.risk_score - a.risk_score)[0] : null
+
+  const NAV = [
+    ['overview', 'Overview'],
+    ['risk', 'Risk'],
+    ['sensors', 'Sensors'],
+    ['evacuation', 'Evacuation'],
+    ['scenarios', 'Scenarios'],
+    ['history', 'History'],
+  ] as const
+
   return (
-    <main>
-      <div className="section">
-        <h2><IconLayers /> Pilot overview</h2>
-        <p>
-          "Villages monitored", "Sensors online" and "Avg. lead time" are all real, live-computed
-          numbers — from the database (Phase 2), the real MQTT sensor pipeline (Phase 8), and the
-          Phase 10 lead-time prototype (straight-line distance / assumed flow velocity — see the
-          "Explain this score" panel below) — scoped to <strong>{selectedRegionLabel}</strong>.
-          Nothing here is a fabricated placeholder.
-        </p>
-        <div className="section region-picker">
+    <main className="dash">
+      <div className="page-head">
+        <div>
+          <h1 className="page-title">Operations dashboard</h1>
+          <p className="page-sub">
+            Live flash-flood and landslide risk for monitored Himalayan villages — showing{' '}
+            <strong>{selectedRegionLabel}</strong>. Decision support only.
+          </p>
+        </div>
+        <div className="region-picker">
           <label htmlFor="region-select">Region</label>
           {regionsError ? (
-            <p className="catchment-empty">Region list unreachable — backend/DB may be down.</p>
+            <p className="catchment-empty">Region list unreachable right now.</p>
           ) : (
             <select
               id="region-select"
@@ -275,7 +269,7 @@ export function AuthorityView() {
                 </option>
               ))}
               {plannedRegions.length > 0 && (
-                <optgroup label="Planned — real, documented, not yet village-sourced">
+                <optgroup label="Planned — documented, not yet village-sourced">
                   {plannedRegions.map((r) => (
                     <option key={r.id} value={r.id} disabled>
                       {r.name} — {r.states} (not yet sourced)
@@ -285,167 +279,238 @@ export function AuthorityView() {
               )}
             </select>
           )}
-          <p className="n">
-            Phase 11's region registry (see <code>docs/Region_Onboarding.md</code>) — "active" regions
-            have real village-level data seeded now; "planned" regions are real, cited flash-flood-prone
-            valleys the architecture already supports but that haven't been sourced to village level yet.
-          </p>
-        </div>
-        <div className="stat-row">
-          <div className="stat-card">
-            <div className="v">
-              {villagesError ? '—' : villages ? villages.length : '…'}
-            </div>
-            <div className="l"><IconUsers size={14} /> Villages monitored</div>
-            <div className="n">
-              {villagesError ? 'backend/DB unreachable' : 'live from /api/v1/villages'}
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="v">{sensorsOnlineLabel}</div>
-            <div className="l"><IconActivity size={14} /> Sensors online</div>
-            <div className="n">
-              {sensorsError ? 'backend/DB unreachable' : 'live from /api/v1/sensors'}
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="v">{avgLeadTimeLabel}</div>
-            <div className="l"><IconClock size={14} /> Avg. lead time</div>
-            <div className="n">
-              {riskError
-                ? 'backend/DB unreachable'
-                : leadTimeValues.length === 0 && riskMap !== null
-                  ? 'no village has an upstream point yet'
-                  : 'Phase 10 prototype — see below'}
-            </div>
-          </div>
         </div>
       </div>
 
-      <div className="section">
-        <h2><IconMap /> Pilot region map</h2>
-        <p>
-          Real village points from the database — green markers have surveyed coordinates,
-          amber markers are honestly labelled approximate (see <code>docs/Data_Sources.md</code>).
-          Catchment polygon boundaries need a real DEM run through <code>gis/delineate_catchment.py</code>
-          (see <code>docs/GIS_Methodology.md</code>) — the panel below reports the true current state,
-          not a fixed claim either way.
-        </p>
-        <PilotMap villages={villages ?? []} />
+      <div className="stat-row">
+        <div className="stat-card">
+          <div className="l"><IconUsers size={14} /> Villages monitored</div>
+          <div className="v">{villagesError ? '—' : villages ? villages.length : '…'}</div>
+          <div className="n">{villagesError ? 'unreachable' : 'in the selected region'}</div>
+        </div>
+        <div className={`stat-card${openAlertCount ? ' stat-card-alert' : ''}`}>
+          <div className="l"><IconShield size={14} /> Open alerts</div>
+          <div className="v">{openAlertCount === null ? '—' : openAlertCount === undefined ? '…' : openAlertCount}</div>
+          <div className="n">{openAlertCount === 0 ? 'all villages LOW/GREEN' : 'yellow, orange or red'}</div>
+        </div>
+        <div className="stat-card">
+          <div className="l"><IconGauge size={14} /> Highest risk</div>
+          <div className="v">{riskError ? '—' : topRisk ? topRisk.risk_score.toFixed(0) : riskMap === null ? '…' : '—'}</div>
+          <div className="n">{topRisk ? `${topRisk.village_name} · ${topRisk.risk_level}` : 'score out of 100'}</div>
+        </div>
+        <div className="stat-card">
+          <div className="l"><IconActivity size={14} /> Sensors online</div>
+          <div className="v">{sensorsOnlineLabel}</div>
+          <div className="n">{sensorsError ? 'unreachable' : 'reporting in the last few minutes'}</div>
+        </div>
+        <div className="stat-card">
+          <div className="l"><IconClock size={14} /> Avg. lead time</div>
+          <div className="v">{avgLeadTimeLabel}</div>
+          <div className="n">
+            {riskError
+              ? 'unreachable'
+              : leadTimeValues.length === 0 && riskMap !== null
+                ? 'no village has an upstream point yet'
+                : 'prototype estimate'}
+          </div>
+        </div>
       </div>
 
-      <div className="section">
-        <h2><IconLayers /> Micro-catchment topology</h2>
-        <p>
-          Upstream → downstream structure, from documented river-order research — not per-village
-          isolated risk. Real today; polygon boundaries pending real GIS delineation.
-        </p>
-        <CatchmentPanel catchments={catchments} error={catchmentsError} />
-      </div>
+      <nav className="section-nav" aria-label="Dashboard sections">
+        {NAV.map(([id, label]) => (
+          <a key={id} href={`#${id}`}>{label}</a>
+        ))}
+      </nav>
 
-      <div className="section">
-        <h2><IconGauge /> Current risk (baseline)</h2>
-        <p>
-          Phase 4's transparent weighted-sum scorer — every score below is computed live from
-          the formula in <code>backend/app/services/risk_engine.py</code>. Rainfall/soil-moisture
-          are simulated by default; set <code>GIRIVARSHA_ACTIVE_RAINFALL_PROVIDER=real</code> /
-          <code>GIRIVARSHA_ACTIVE_SOIL_PROVIDER=real</code> in <code>backend/.env</code> to switch
-          to live Open-Meteo data (free, no API key) — see the README's "Real weather data"
-          section. Confidence is shown next to every score and reflects whichever mix is actually
-          active, never a fixed claim either way.
-        </p>
-        <RiskPanel
-          riskMap={riskMap}
-          riskError={riskError}
-          alerts={scopedAlerts}
-          alertsError={alertsError}
-          liveStatus={liveStatus}
-        />
-      </div>
+      <div className="dash-grid" id="overview">
+        <Card
+          id="map"
+          className="span-8"
+          icon={<IconMap />}
+          title="Region map"
+          summary="Monitored villages. Green = surveyed coordinates, amber = approximate."
+          howItWorks={
+            <>
+              <p>
+                Village points come straight from the database. Approximate coordinates are labelled as such
+                rather than presented as surveyed. The dashed line only connects villages in elevation order
+                within each catchment — it is not the river's real course.
+              </p>
+              <p>
+                The optional wind layer shows real Open-Meteo 10 m wind on a coarse grid. It is regional
+                context only and is not used by the risk model.
+              </p>
+            </>
+          }
+        >
+          <PilotMap villages={villages ?? []} />
+        </Card>
 
-      <div className="section">
-        <h2><IconMessage /> Explain this score</h2>
-        <p>
-          Phase 9 — a real model-agnostic "why" narrative: ranks and narrates the baseline's own
-          transparent components (the same ones the risk panel above sums), in plain language.
-          This explains the model that's actually running, not a fabricated SHAP explanation of
-          the undeployed Phase 5 ML layer — see <code>docs/ML_Methodology.md</code>.
-        </p>
-        <ExplanationPanel villages={villages} />
-      </div>
+        <div className="span-4 stack">
+          <Card
+            id="alerts"
+            icon={<IconShield />}
+            title="Active alerts"
+            actions={<LiveBadge status={liveStatus} />}
+            summary="Updates instantly when any village's level changes."
+          >
+            <AlertsList alerts={scopedAlerts} alertsError={alertsError} />
+          </Card>
+          <Card
+            id="catchments"
+            icon={<IconLayers />}
+            title="Catchments"
+            summary="How villages connect upstream to downstream."
+            howItWorks={
+              <p>
+                Upstream → downstream order comes from documented river-order research, so a village's risk can
+                reflect rain falling above it. Mapped boundary polygons are shown only where a real terrain
+                delineation exists.
+              </p>
+            }
+          >
+            <CatchmentPanel catchments={catchments} error={catchmentsError} />
+          </Card>
+        </div>
 
-      <div className="section">
-        <h2><IconRadio /> Sensor network</h2>
-        <p>
-          Phase 8's real registry — 3 pilot locations (source, mid-valley, outlet) in the Mandakini
-          valley, a rainfall + soil-moisture node each. Status is live-computed from freshness, never
-          a stored flag. No hardware has been deployed to the Chamoli valley yet, so selecting it
-          above honestly shows 0/0 here rather than any Mandakini reading.
-        </p>
-        <SensorPanel sensors={scopedSensors} error={sensorsError} />
-      </div>
+        <Card
+          id="risk"
+          className="span-7"
+          icon={<IconGauge />}
+          title="Current risk"
+          summary="Every village, highest risk first. Confidence shows how much of the input is real data."
+          howItWorks={
+            <>
+              <p>
+                Each score is a transparent weighted sum of five inputs: current rainfall, soil saturation,
+                rainfall upstream in the same catchment, past recorded events, and the melt rate of the nearest
+                glacier. Rainfall and soil moisture come from Open-Meteo (refreshed hourly); recent rainfall
+                history comes from NASA POWER.
+              </p>
+              <p>
+                Confidence reflects how many inputs are real rather than simulated — it is not a measure of
+                validated accuracy. A machine-learning model was trained and tested but is not deployed: there
+                are too few recorded events to validate it. The extra indicators under each village (runoff,
+                rainfall threshold, glacial hazard) are independent estimates shown alongside the score, never
+                folded into it.
+              </p>
+            </>
+          }
+        >
+          <RiskPanel
+            riskMap={riskMap}
+            riskError={riskError}
+            alerts={scopedAlerts}
+            alertsError={alertsError}
+            liveStatus={liveStatus}
+            showAlerts={false}
+          />
+        </Card>
 
-      <div className="section">
-        <h2><IconRoute /> Evacuation routing</h2>
-        <p>
-          Phase 12 prototype — a real shortest-path search (networkx) over each catchment's real
-          village topology to its real, lowest-elevation seeded settlement (never a fabricated
-          "shelter" building). No real road network exists in this build (this sandbox's network
-          couldn't reach OpenStreetMap/OSRM — see <code>docs/Data_Sources.md</code>), so hops follow
-          the same elevation-order proxy the map's dashed line and the lead-time estimate already
-          use — not real road/trail geometry. A hop is flagged when either endpoint is currently at
-          HIGH/CRITICAL risk — a derived heuristic, not real road-hazard data.
-        </p>
-        <EvacuationPanel villages={villages} regionId={selectedRegionId} />
-      </div>
+        <Card
+          id="explain"
+          className="span-5"
+          icon={<IconMessage />}
+          title="Why this score?"
+          summary="What is driving a village's score right now, in plain language."
+          howItWorks={
+            <p>
+              This ranks the five inputs of the formula that is actually running by their share of the score. It
+              explains that formula directly — it is not an attribution over the undeployed ML model.
+            </p>
+          }
+        >
+          <ExplanationPanel villages={villages} />
+        </Card>
 
-      <div className="section">
-        <h2><IconListOrdered /> Evacuation priority</h2>
-        <p>
-          A transparent ranking, not an evacuation order — decision-support only. Sorted by current
-          risk level severity, then by less warning time (Phase 10 lead-time estimate), then by risk
-          score. Every input here is already real/derived elsewhere in this app; this just orders
-          them, never invents a new composite score.
-        </p>
-        <PriorityPanel regionId={selectedRegionId} />
-      </div>
+        <Card
+          id="sensors"
+          className="span-12"
+          icon={<IconRadio />}
+          title="Sensor network"
+          summary="Field rain gauges and soil-moisture probes. Offline nodes show a labelled regional estimate instead."
+          howItWorks={
+            <>
+              <p>
+                Status is computed from how recently each node reported. Readings travel over MQTT to an
+                authenticated ingestion API; each device has its own key.
+              </p>
+              <p>
+                No physical hardware is deployed yet, so nodes are currently offline. Where a node has no reading,
+                its village's real Open-Meteo estimate is shown in italics as "regional est." — that is weather
+                data for the area, not that device's own measurement.
+              </p>
+            </>
+          }
+        >
+          <SensorPanel sensors={scopedSensors} error={sensorsError} />
+        </Card>
 
-      <div className="section">
-        <h2><IconSliders /> What-if simulator</h2>
-        <p>
-          A presenter-controllable scenario, not a separate demo model — overriding rainfall and/or
-          soil saturation here recomputes the exact same transparent baseline formula shown above
-          (<code>backend/app/services/risk_engine.py</code>), live. Nothing run here is persisted or
-          fed into <code>/alerts</code>; it exists purely so a walkthrough can show what a higher-risk
-          moment would look like without waiting for real weather to cooperate. See{' '}
-          <code>docs/Demo_Guide.md</code>.
-        </p>
-        <WhatIfPanel villages={villages} />
-      </div>
+        <Card
+          id="evacuation"
+          className="span-8"
+          icon={<IconRoute />}
+          title="Evacuation routes"
+          summary="Shortest route from each village to the lowest, safest settlement in its valley."
+          howItWorks={
+            <p>
+              Routes are computed over each catchment's villages, using real OpenStreetMap roads and trails where
+              they connect and a straight-line estimate where they don't. A leg is flagged when either end is
+              currently at HIGH or CRITICAL risk — a heuristic, not live road-condition data. Destinations are
+              real settlements, not designated shelters.
+            </p>
+          }
+        >
+          <EvacuationPanel villages={villages} regionId={selectedRegionId} />
+        </Card>
 
-      <div className="section">
-        <h2><IconHistory /> Historical event replay</h2>
-        <p>
-          Phase 12 — real, cited sub-events from the two seeded historical disasters, steppable in
-          order. There is deliberately no fabricated minute-by-minute reconstruction: each moment
-          below is labelled by exactly how precisely it's documented (an exact cited clock time, an
-          estimate derived from one, or just the date) — see{' '}
-          <code>scripts/seed_event_timelines.py</code>.
-        </p>
-        <ReplayPanel />
-      </div>
+        <Card
+          id="priority"
+          className="span-4"
+          icon={<IconListOrdered />}
+          title="Evacuation priority"
+          summary="Which villages to attend to first. Not an evacuation order."
+          howItWorks={
+            <p>
+              Sorted by risk level, then by least warning time, then by score. It only orders inputs already shown
+              elsewhere — it does not create a new score.
+            </p>
+          }
+        >
+          <PriorityPanel regionId={selectedRegionId} />
+        </Card>
 
-      <div className="section">
-        <h2><IconCheckSquare /> Build status</h2>
-        <p>Following the incremental build order — each phase is implemented, tested and reported before the next begins.</p>
-        <ul className="phase-list">
-          {PHASES.map((p) => (
-            <li key={p.name}>
-              <span className={`badge ${p.status}`}>{p.status}</span>
-              {p.name}
-            </li>
-          ))}
-        </ul>
+        <Card
+          id="scenarios"
+          className="span-6"
+          icon={<IconSliders />}
+          title="What-if simulator"
+          summary="Try heavier rain or wetter ground and see how a village's score would change."
+          howItWorks={
+            <p>
+              Overrides run through the exact same formula as the live scores. Nothing here is saved or turned into
+              an alert.
+            </p>
+          }
+        >
+          <WhatIfPanel villages={villages} />
+        </Card>
+
+        <Card
+          id="history"
+          className="span-6"
+          icon={<IconHistory />}
+          title="Historical replay"
+          summary="Step through past disasters in this region, moment by moment."
+          howItWorks={
+            <p>
+              Each step is a cited event from the public record, labelled by how precisely its time is known: an
+              exact time, an estimate, or the date only. Nothing is reconstructed or invented.
+            </p>
+          }
+        >
+          <ReplayPanel />
+        </Card>
       </div>
     </main>
   )
