@@ -516,6 +516,17 @@ def _village_point(village: Village) -> tuple[float, float]:
     return p.y, p.x
 
 
+def _snapshot_note(reading) -> str:
+    """' (Open-Meteo hourly snapshot, N min old)' when the reading came from
+    the scheduled snapshot table rather than a live call — so its age is
+    visible wherever the component description is shown."""
+    from app.providers.weather_cache import SNAPSHOT_SUFFIX, age_minutes
+
+    if reading is None or not reading.provider_name.endswith(SNAPSHOT_SUFFIX):
+        return ""
+    return f" (Open-Meteo hourly snapshot, {age_minutes(reading.observed_at)} min old)"
+
+
 def compute_risk_for_village(
     village: Village,
     db: Session,
@@ -578,7 +589,7 @@ def compute_risk_for_village(
         rainfall_description = (
             f"Current rainfall rate from this village's live sensor ({rainfall_reading.provider_name})"
             if rainfall_from_sensor
-            else "Current rainfall rate at this village"
+            else "Current rainfall rate at this village" + _snapshot_note(rainfall_reading)
         )
     rainfall_component = Component(
         name="rainfall_intensity",
@@ -602,7 +613,7 @@ def compute_risk_for_village(
         soil_description = (
             f"Current soil saturation from this village's live sensor ({soil_reading.provider_name})"
             if soil_from_sensor
-            else "Current soil saturation at this village"
+            else "Current soil saturation at this village" + _snapshot_note(soil_reading)
         )
     soil_component = Component(
         name="soil_moisture",

@@ -86,3 +86,14 @@ Render's free tier shares outbound IPs between many apps, so Open-Meteo's per-IP
 5. In Render, set the static site's `VITE_API_BASE_URL` to `https://<API_DOMAIN>` and redeploy it. The Render API service can then be suspended.
 
 Updating later: `git pull && docker compose -f deploy/vm/docker-compose.yml up -d --build`.
+
+## Hourly weather snapshot (GitHub Actions) — the no-card fix for Open-Meteo 429s
+
+`.github/workflows/weather-snapshot.yml` runs `scripts/fetch_weather_snapshot.py` every hour (and on demand via "Run workflow"). It makes ONE batched Open-Meteo request for every village's current rainfall and soil moisture and upserts them into the `weather_snapshots` table (migration `8a1e4c2d9f10`). `RealRainfallProvider`/`RealSoilMoistureProvider` use a stored reading within ~5 km that is under 2 hours old before trying a live call, so the risk engine and the sensor "regional est." fallback get real data even when the host's shared IP is rate-limited. Risk component descriptions say "Open-Meteo hourly snapshot, N min old" so the age is always visible. If the job stops running, readings age out after 2 hours and the app degrades exactly as before (live call, then honest simulated fallback).
+
+Setup:
+1. Apply the migration to Neon from your laptop: `cd backend && GIRIVARSHA_DATABASE_URL='postgresql+psycopg://...' alembic upgrade head`.
+2. GitHub repo → Settings → Secrets and variables → Actions → New repository secret: name `GIRIVARSHA_DATABASE_URL`, value = the same Neon URL.
+3. Actions tab → "Hourly weather snapshot" → Run workflow, and check it goes green.
+
+Cost: ~1 min per run, ~730 min/month, inside the free 2,000 min for private repos. Scheduled runs can start several minutes late.

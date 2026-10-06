@@ -107,6 +107,24 @@ class SimulatedRainfallProvider(DataProvider):
 
 
 OPEN_METEO_BASE_URL = "https://api.open-meteo.com/v1/forecast"
+
+
+def _snapshot_reading(kind: str, lat: float, lon: float, provider_name: str) -> Reading | None:
+    """A fresh REAL reading from the hourly snapshot table, if there is one
+    (see app/providers/weather_cache.py). `observed_at` is when it was
+    fetched, so its age is reported honestly downstream."""
+    from app.providers import weather_cache
+
+    snap = weather_cache.lookup(kind, lat, lon)
+    if snap is None:
+        return None
+    return Reading(
+        value=round(snap.value, 1),
+        unit=snap.unit,
+        source=DataSource.REAL,
+        observed_at=snap.fetched_at,
+        provider_name=provider_name + weather_cache.SNAPSHOT_SUFFIX,
+    )
 OPEN_METEO_TIMEOUT_SECONDS = 8.0
 
 
@@ -142,6 +160,9 @@ class RealRainfallProvider(DataProvider):
         self._timeout = timeout_seconds
 
     def fetch(self, *, lat: float, lon: float) -> Reading:
+        snap = _snapshot_reading("rainfall", lat, lon, self.name)
+        if snap is not None:
+            return snap
         try:
             response = httpx.get(
                 OPEN_METEO_BASE_URL,
@@ -221,6 +242,9 @@ class RealSoilMoistureProvider(DataProvider):
         self._timeout = timeout_seconds
 
     def fetch(self, *, lat: float, lon: float) -> Reading:
+        snap = _snapshot_reading("soil_moisture", lat, lon, self.name)
+        if snap is not None:
+            return snap
         try:
             response = httpx.get(
                 OPEN_METEO_BASE_URL,

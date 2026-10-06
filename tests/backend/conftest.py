@@ -53,3 +53,11 @@ def _fail_fast_on_real_open_meteo_calls_by_default(monkeypatch):
 
     monkeypatch.setattr("app.providers.base.httpx.get", _immediate_connect_error, raising=False)
     yield
+
+
+@pytest.fixture(autouse=True)
+def _no_weather_snapshot_by_default(monkeypatch):
+    """Tests exercise the live-provider paths unless they opt in; a local DB
+    that happens to hold real snapshot rows must not change their outcome."""
+    monkeypatch.setattr("app.providers.weather_cache.lookup", lambda *a, **k: None)
+    yield
