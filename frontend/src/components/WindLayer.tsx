@@ -18,15 +18,15 @@ const MAX_AGE = 80
 // drifts visibly (a real 0.8 m/s breeze would otherwise be ~0.3 px/frame,
 // i.e. invisible), and speed is encoded by colour band + relative motion,
 // never to physical scale.
-const MIN_STEP_PX = 1.0
-const STEP_PX_PER_MS = 0.45
-const MAX_STEP_PX = 5
+const MIN_STEP_PX = 0.5
+const STEP_PX_PER_MS = 0.25
+const MAX_STEP_PX = 2.5
 
 export const WIND_BANDS: { max: number; label: string; colour: string }[] = [
-  { max: 2, label: '< 2 m/s', colour: 'rgba(30,90,200,0.95)' },
-  { max: 5, label: '2–5 m/s', colour: 'rgba(10,120,90,0.95)' },
-  { max: 9, label: '5–9 m/s', colour: 'rgba(214,130,0,0.97)' },
-  { max: Infinity, label: '≥ 9 m/s', colour: 'rgba(200,40,30,1)' },
+  { max: 2, label: '< 2 m/s', colour: 'rgba(30,90,200,0.45)' },
+  { max: 5, label: '2–5 m/s', colour: 'rgba(10,120,90,0.5)' },
+  { max: 9, label: '5–9 m/s', colour: 'rgba(214,130,0,0.6)' },
+  { max: Infinity, label: '≥ 9 m/s', colour: 'rgba(200,40,30,0.7)' },
 ]
 
 function colourFor(speed: number): string {
@@ -68,7 +68,7 @@ export function WindLayer({ field }: WindLayerProps) {
       canvas.style.width = `${size.x}px`
       canvas.style.height = `${size.y}px`
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      particleCount = Math.max(150, Math.min(1200, Math.round((size.x * size.y) / 320)))
+      particleCount = Math.max(80, Math.min(400, Math.round((size.x * size.y) / 1000)))
     }
     resize()
 
@@ -83,10 +83,10 @@ export function WindLayer({ field }: WindLayerProps) {
     const frame = () => {
       // Fade previous frame to leave trails.
       ctx.globalCompositeOperation = 'destination-in'
-      ctx.fillStyle = 'rgba(0,0,0,0.955)'
+      ctx.fillStyle = 'rgba(0,0,0,0.9)'
       ctx.fillRect(0, 0, canvas.width, canvas.height)
       ctx.globalCompositeOperation = 'source-over'
-      ctx.lineWidth = 2.2
+      ctx.lineWidth = 1.1
       ctx.lineCap = 'round'
       for (const p of particles) {
         const w = sampleWind(field, p.lat, p.lon)
