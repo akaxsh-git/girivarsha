@@ -1,0 +1,34 @@
+# Backend on your own VM (own public IP => your own Open-Meteo free-tier quota).
+# Usage (on the VM, from the repo root):
+#   cp deploy/vm/.env.example deploy/vm/.env   # then fill it in
+#   docker compose -f deploy/vm/docker-compose.yml up -d --build
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: deploy/Dockerfile.backend
+    env_file: .env
+    environment:
+      PORT: "8000"
+    restart: unless-stopped
+    expose:
+      - "8000"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      API_DOMAIN: ${API_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+
+volumes:
+  caddy_data:
+  caddy_config:

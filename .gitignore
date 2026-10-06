@@ -47,3 +47,4 @@ Claude outputs/
 *-delta/
 whatif-simulator-delta.zip
 *.tsbuildinfo
+deploy/vm/.env

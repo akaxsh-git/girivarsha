@@ -1,0 +1,6 @@
+# Caddy gets and renews a real HTTPS certificate automatically.
+# API_DOMAIN is e.g. 203-0-113-7.sslip.io (free DNS that maps to your VM's IP).
+{$API_DOMAIN} {
+	encode gzip
+	reverse_proxy api:8000
+}

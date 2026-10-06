@@ -74,3 +74,15 @@ The keys generated for Neon are not needed: the hosted site has no publisher, an
 ## Gotcha: database URL driver prefix
 
 The backend uses SQLAlchemy with the `psycopg` v3 driver, so `GIRIVARSHA_DATABASE_URL` must start with `postgresql+psycopg://`. Neon shows `postgresql://...`; pasting that as-is makes SQLAlchemy look for `psycopg2` and every DB endpoint returns 500 (`No module named 'psycopg2'`) while `/health` still looks fine. Add `+psycopg` after `postgresql`, and never paste the real password into chat or commit it.
+
+## Option: backend on your own free VM (fixes Open-Meteo 429s)
+
+Render's free tier shares outbound IPs between many apps, so Open-Meteo's per-IP free quota (10,000 calls/day) is used up by others and every server-side weather call gets HTTP 429 — rainfall/soil silently fall back to simulated. A VM with its own public IP gets its own quota. Files: `deploy/vm/` (docker-compose with the API + Caddy for automatic HTTPS, `setup.sh`, `.env.example`).
+
+1. Create an Ubuntu VM (e.g. Oracle Cloud Always Free, `VM.Standard.E2.1.Micro` or Ampere A1). Allow inbound TCP 80 and 443 in its cloud firewall / security list.
+2. SSH in, `git clone` the repo, run `bash deploy/vm/setup.sh`, log out and back in.
+3. `cp deploy/vm/.env.example deploy/vm/.env` and fill it in. `API_DOMAIN` is the VM's IP with dashes + `.sslip.io` (free DNS, e.g. `203-0-113-7.sslip.io`).
+4. `docker compose -f deploy/vm/docker-compose.yml up -d --build`, then check `https://<API_DOMAIN>/api/v1/health`.
+5. In Render, set the static site's `VITE_API_BASE_URL` to `https://<API_DOMAIN>` and redeploy it. The Render API service can then be suspended.
+
+Updating later: `git pull && docker compose -f deploy/vm/docker-compose.yml up -d --build`.
