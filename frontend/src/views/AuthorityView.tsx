@@ -206,6 +206,11 @@ export function AuthorityView() {
   const scopedSensors = sensors
   const scopedAlerts = alerts
 
+  // No device has ever reported => no hardware is deployed yet. Say that,
+  // rather than a bare "0/12 online" that reads like an outage.
+  const noneDeployed =
+    !!scopedSensors && scopedSensors.length > 0 && scopedSensors.every((s) => s.seconds_since_last_seen === null)
+
   const sensorsOnlineLabel = sensorsError
     ? '—'
     : scopedSensors
@@ -299,9 +304,15 @@ export function AuthorityView() {
           <div className="n">{topRisk ? `${topRisk.village_name} · ${topRisk.risk_level}` : 'score out of 100'}</div>
         </div>
         <div className="stat-card">
-          <div className="l"><IconActivity size={14} /> Sensors online</div>
-          <div className="v">{sensorsOnlineLabel}</div>
-          <div className="n">{sensorsError ? 'unreachable' : 'reporting in the last few minutes'}</div>
+          <div className="l"><IconActivity size={14} /> {noneDeployed ? 'Field sensors' : 'Sensors online'}</div>
+          <div className="v">{noneDeployed ? 'None yet' : sensorsOnlineLabel}</div>
+          <div className="n">
+            {sensorsError
+              ? 'unreachable'
+              : noneDeployed
+                ? `none deployed yet (${scopedSensors!.length} sites planned)`
+                : 'reporting in the last few minutes'}
+          </div>
         </div>
         <div className="stat-card">
           <div className="l"><IconClock size={14} /> Avg. lead time</div>
@@ -428,7 +439,7 @@ export function AuthorityView() {
           className="span-12"
           icon={<IconRadio />}
           title="Sensor network"
-          summary="Field rain gauges and soil-moisture probes. Offline nodes show a labelled regional estimate instead."
+          summary={noneDeployed ? "Planned rain-gauge and soil-moisture sites. No hardware is deployed yet, so each shows its area's regional weather estimate." : "Field rain gauges and soil-moisture probes. Offline nodes show a labelled regional estimate instead."}
           howItWorks={
             <>
               <p>

@@ -695,3 +695,4 @@ main.citizen-main { max-width: 720px; }
 .sensor-row .sensor-auth { order: 2; margin-left: auto; }
 .sensor-row .sensor-id { order: 3; flex-basis: 100%; margin-top: 4px; }
 .sensor-row .sensor-value { order: 4; margin-top: 2px; }
+.stat-card .n { white-space: normal; }
