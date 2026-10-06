@@ -12,7 +12,10 @@ vi.mock('react-leaflet', () => ({
   Popup: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
   Polyline: () => null,
 }))
-vi.mock('./WindLayer', () => ({ WindLayer: () => <div data-testid="wind-layer" /> }))
+vi.mock('./WindLayer', () => ({
+  WindLayer: () => <div data-testid="wind-layer" />,
+  WIND_BANDS: [{ max: 2, label: '< 2 m/s', colour: 'blue' }],
+}))
 
 const villages: Village[] = [
   {

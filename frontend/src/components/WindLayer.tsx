@@ -13,17 +13,24 @@ interface Particle {
   age: number
 }
 
-const PARTICLE_COUNT = 700
-const MAX_AGE = 90
-// Pixels moved per frame per m/s of wind. Purely visual; speed is encoded
-// by colour and by relative motion, not to physical scale.
-const PX_PER_MS = 0.35
+const MAX_AGE = 80
+// Visual step per frame (pixels). Purely a display scale: calm air still
+// drifts visibly (a real 0.8 m/s breeze would otherwise be ~0.3 px/frame,
+// i.e. invisible), and speed is encoded by colour band + relative motion,
+// never to physical scale.
+const MIN_STEP_PX = 1.0
+const STEP_PX_PER_MS = 0.45
+const MAX_STEP_PX = 5
+
+export const WIND_BANDS: { max: number; label: string; colour: string }[] = [
+  { max: 2, label: '< 2 m/s', colour: 'rgba(30,90,200,0.95)' },
+  { max: 5, label: '2–5 m/s', colour: 'rgba(10,120,90,0.95)' },
+  { max: 9, label: '5–9 m/s', colour: 'rgba(214,130,0,0.97)' },
+  { max: Infinity, label: '≥ 9 m/s', colour: 'rgba(200,40,30,1)' },
+]
 
 function colourFor(speed: number): string {
-  if (speed < 2) return 'rgba(120,190,255,0.85)'
-  if (speed < 5) return 'rgba(90,220,170,0.85)'
-  if (speed < 9) return 'rgba(255,214,90,0.9)'
-  return 'rgba(255,120,90,0.95)'
+  return (WIND_BANDS.find((b) => speed < b.max) ?? WIND_BANDS[WIND_BANDS.length - 1]).colour
 }
 
 /**
@@ -52,10 +59,16 @@ export function WindLayer({ field }: WindLayerProps) {
       typeof window.matchMedia === 'function' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1))
+    let particleCount = 400
     const resize = () => {
       const size = map.getSize()
-      canvas.width = size.x
-      canvas.height = size.y
+      canvas.width = Math.round(size.x * dpr)
+      canvas.height = Math.round(size.y * dpr)
+      canvas.style.width = `${size.x}px`
+      canvas.style.height = `${size.y}px`
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      particleCount = Math.max(150, Math.min(1200, Math.round((size.x * size.y) / 320)))
     }
     resize()
 
@@ -64,16 +77,17 @@ export function WindLayer({ field }: WindLayerProps) {
       lon: field.west + Math.random() * (field.east - field.west),
       age: Math.floor(Math.random() * MAX_AGE),
     })
-    let particles: Particle[] = Array.from({ length: PARTICLE_COUNT }, spawn)
+    let particles: Particle[] = Array.from({ length: particleCount }, spawn)
     let raf = 0
 
     const frame = () => {
       // Fade previous frame to leave trails.
       ctx.globalCompositeOperation = 'destination-in'
-      ctx.fillStyle = 'rgba(0,0,0,0.92)'
+      ctx.fillStyle = 'rgba(0,0,0,0.955)'
       ctx.fillRect(0, 0, canvas.width, canvas.height)
       ctx.globalCompositeOperation = 'source-over'
-      ctx.lineWidth = 1.4
+      ctx.lineWidth = 2.2
+      ctx.lineCap = 'round'
       for (const p of particles) {
         const w = sampleWind(field, p.lat, p.lon)
         if (!w || p.age > MAX_AGE) {
@@ -82,7 +96,12 @@ export function WindLayer({ field }: WindLayerProps) {
         }
         const from = map.latLngToContainerPoint([p.lat, p.lon])
         const speed = Math.hypot(w.u, w.v)
-        const to = { x: from.x + w.u * PX_PER_MS, y: from.y - w.v * PX_PER_MS }
+        if (speed < 0.05) {
+          p.age += 1
+          continue
+        }
+        const step = Math.min(MAX_STEP_PX, MIN_STEP_PX + speed * STEP_PX_PER_MS)
+        const to = { x: from.x + (w.u / speed) * step, y: from.y - (w.v / speed) * step }
         ctx.strokeStyle = colourFor(speed)
         ctx.beginPath()
         ctx.moveTo(from.x, from.y)
@@ -98,7 +117,7 @@ export function WindLayer({ field }: WindLayerProps) {
 
     const onViewChange = () => {
       resize()
-      particles = Array.from({ length: PARTICLE_COUNT }, spawn)
+      particles = Array.from({ length: particleCount }, spawn)
       if (reduced) for (let i = 0; i < 40; i++) frame()
     }
     map.on('moveend zoomend resize', onViewChange)

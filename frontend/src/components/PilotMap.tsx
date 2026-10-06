@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, CircleMarker, Popup, Polyline } from 'react-le
 import { latLngBounds, type LatLngBoundsExpression } from 'leaflet'
 import { getWindField, type Village, type WindField } from '../lib/api'
 import { meanSpeed, windBoundsFor } from '../lib/wind'
-import { WindLayer } from './WindLayer'
+import { WIND_BANDS, WindLayer } from './WindLayer'
 import 'leaflet/dist/leaflet.css'
 
 interface PilotMapProps {
@@ -158,6 +158,15 @@ export function PilotMap({ villages }: PilotMapProps) {
         <span>
           <i className="line-legend" /> Elevation order within each catchment only — not the real river course
         </span>
+        {windOn && wind && (
+          <span className="wind-bands">
+            {WIND_BANDS.map((b) => (
+              <span key={b.label}>
+                <i className="wind-swatch" style={{ background: b.colour }} /> {b.label}
+              </span>
+            ))}
+          </span>
+        )}
         {windOn && wind && (
           <span>
             Wind: real Open-Meteo current 10 m wind, coarse regional grid (mean{' '}
