@@ -8,7 +8,7 @@ from app.services.risk_engine import MODEL_VERSION_TAG
 router = APIRouter(tags=["system"])
 
 
-@router.get("/health")
+@router.api_route("/health", methods=["GET", "HEAD"])
 def health():
     """Liveness/readiness probe. Always cheap, never touches the DB or a provider."""
     settings = get_settings()

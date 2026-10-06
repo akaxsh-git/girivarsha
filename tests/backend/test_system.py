@@ -69,3 +69,8 @@ def test_simulated_rainfall_provider_is_labelled_simulated():
     body = r.json()
     assert body["source"] == "simulated"
     assert body["value"] >= 0
+
+
+def test_health_accepts_head_for_uptime_monitors():
+    # UptimeRobot and similar monitors probe with HEAD; a 405 there reads as "down".
+    assert client.head("/api/v1/health").status_code == 200
